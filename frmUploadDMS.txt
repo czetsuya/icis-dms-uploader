@@ -8,6 +8,7 @@ Private Sub btnAppendToCentralDMS_Click()
     Else
         Globals.mode = 0
         eAppendToCentralDMS
+        eDeleteFromLocalDMS
     End If
 End Sub
 
@@ -56,6 +57,7 @@ Private Sub btnUpdateLocalDMS_Click()
         eUpdateLocalDMS
         DoCmd.SetWarnings True
     End If
+    MsgBox "Local DMS has been successfully updated.", vbInformation, "Local DMS Update"
 End Sub
 'end events
 
@@ -493,6 +495,7 @@ End Sub
 Private Sub eAppendToCentralDMS()
     DoCmd.SetWarnings False
     
+    'insert to central
     DoCmd.RunSQL "INSERT INTO study1 SELECT * FROM study where studyid >0"
     DoCmd.RunSQL "INSERT INTO factor1 SELECT * FROM factor where labelid > 0"
     DoCmd.RunSQL "INSERT INTO variate1 SELECT * FROM variate where variatid >0"
@@ -512,6 +515,34 @@ Private Sub eAppendToCentralDMS()
     DoCmd.RunSQL "INSERT INTO trait SELECT * FROM trait where traitid >0"
     DoCmd.RunSQL "INSERT INTO scale SELECT * FROM scale where scaleid >0"
     DoCmd.RunSQL "INSERT INTO tmethod SELECT * FROM tmethod where tmethid >0"
+    
+    DoCmd.SetWarnings True
+    
+    MsgBox "Local DMS has been successfully appended to the Central DMS.", vbInformation, "Central DMS Update"
+End Sub
+
+Private Sub eDeleteFromLocalDMS()
+    DoCmd.SetWarnings False
+    'delete updated local dms tables
+    DoCmd.RunSQL "DELETE FROM study where studyid >0"
+    DoCmd.RunSQL "DELETE FROM factor where labelid > 0"
+    DoCmd.RunSQL "DELETE FROM variate where variatid >0"
+    DoCmd.RunSQL "DELETE FROM level_n where levelno>0"
+    DoCmd.RunSQL "DELETE FROM level_c where levelno>0"
+    DoCmd.RunSQL "DELETE FROM levels where levelno>0"
+    DoCmd.RunSQL "DELETE FROM data_n where ounitid>0"
+    DoCmd.RunSQL "DELETE FROM data_c where ounitid>0"
+    DoCmd.RunSQL "DELETE FROM effect where effectid>0"
+    DoCmd.RunSQL "DELETE FROM veffect where variatid>0"
+    DoCmd.RunSQL "DELETE FROM steffect where effectid>0"
+    DoCmd.RunSQL "DELETE FROM oindex where ounitid>0"
+    DoCmd.RunSQL "DELETE FROM represtn where represno>0"
+    DoCmd.RunSQL "DELETE FROM obsunit where ounitid>0"
+    DoCmd.RunSQL "DELETE FROM dmsattr where dmsatid >0"
+    
+    DoCmd.RunSQL "DELETE FROM trait where traitid >0"
+    DoCmd.RunSQL "DELETE FROM scale where scaleid >0"
+    DoCmd.RunSQL "DELETE FROM tmethod where tmethid >0"
     
     DoCmd.SetWarnings True
 End Sub
