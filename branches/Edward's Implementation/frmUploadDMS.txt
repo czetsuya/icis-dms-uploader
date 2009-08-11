@@ -37,8 +37,9 @@ End Sub
 
 Private Sub btnLinkTables_Click()
     Globals.mode = 1
-    eLinkLocalTables
-    eLinkCentralTables
+    If (eLinkLocalTables) Then
+        eLinkCentralTables
+    End If
 End Sub
 
 Private Sub btnUpdateLocalDMS_Click()
@@ -59,7 +60,7 @@ End Sub
 'end events
 
 'link local tables
-Private Sub eLinkLocalTables()
+Private Function eLinkLocalTables() As Boolean
     Dim db As Database
     Dim strInput As String, strDB As String
     Set db = CurrentDb
@@ -68,7 +69,8 @@ Private Sub eLinkLocalTables()
     strDB = LaunchCD(Me, "Please select the LOCAL DMS database.")
 
     If IsNull(strDB) Or Trim(strDB) = "" Then
-       Exit Sub
+       eLinkLocalTables = False
+       Exit Function
     End If
     DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "STUDY", "STUDY"
     DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "FACTOR", "FACTOR"
@@ -89,7 +91,8 @@ Private Sub eLinkLocalTables()
     DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "LEVELS", "LEVELS"
     DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "OBSUNIT", "OBSUNIT"
     DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "REPRESTN", "REPRESTN"
-End Sub
+    eLinkLocalTables = True
+End Function
 
 'link central tables
 Private Sub eLinkCentralTables()
@@ -278,73 +281,121 @@ Private Sub eCreateNewId()
     str = "SELECT MAX(studyid) FROM study1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxStudyid = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxStudyid = 0
+    Else
+        maxStudyid = rst.fields(0)
+    End If
     rst.Close
     
-    str = "SELECT MAX(levelno) FROM (SELECT levelno FROM level_c UNION SELECT levelno FROM level_n) AS t1"
+    str = "SELECT MAX(levelno) FROM (SELECT levelno FROM level_c1 UNION SELECT levelno FROM level_n1) AS t1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxLevelno = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxLevelno = 0
+    Else
+        maxLevelno = rst.fields(0)
+    End If
     rst.Close
     
     str = "SELECT MAX(labelid) FROM factor1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxLabelid = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxLabelid = 0
+    Else
+        maxLabelid = rst.fields(0)
+    End If
     rst.Close
     
     str = "SELECT MAX(tid) FROM trait1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxTid = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxTid = 0
+    Else
+        maxTid = rst.fields(0)
+    End If
     rst.Close
     
     str = "SELECT MAX(scaleid) FROM scale1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxScaleid = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxScaleid = 0
+    Else
+        maxScaleid = rst.fields(0)
+    End If
     rst.Close
     
     str = "SELECT MAX(tmethid) FROM tmethod1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxTmethid = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxTmethid = 0
+    Else
+        maxTmethid = rst.fields(0)
+    End If
     rst.Close
     
     str = "SELECT MAX(variatid) FROM variate1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxVariatid = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxVariatid = 0
+    Else
+        maxVariatid = rst.fields(0)
+    End If
     rst.Close
     
     str = "SELECT MAX(ounitid) FROM oindex1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxOunitid = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxOunitid = 0
+    Else
+        maxOunitid = rst.fields(0)
+    End If
     rst.Close
     
     str = "SELECT MAX(dmsatid) FROM dmsattr1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxDmsatid = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxDmsatid = 0
+    Else
+        maxDmsatid = rst.fields(0)
+    End If
     rst.Close
     
     str = "SELECT MAX(effectid) FROM effect1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxEffectid = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxEffectid = 0
+    Else
+        maxEffectid = rst.fields(0)
+    End If
     rst.Close
     
     str = "SELECT MAX(represno) FROM effect1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxRepresno = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxRepresno = 0
+    Else
+        maxRepresno = rst.fields(0)
+    End If
     rst.Close
     
     str = "SELECT MAX(traitid) FROM trait1"
     Set qdf = CurrentDb.CreateQueryDef("", str)
     Set rst = qdf.OpenRecordset()
-    maxTraitid = rst.fields(0)
+    If (IsNull(rst.fields(0))) Then
+        maxTraitid = 0
+    Else
+        maxTraitid = rst.fields(0)
+    End If
     rst.Close
     
     DoCmd.RunSQL "UPDATE znewstudy set newstudyid = id + " & maxStudyid
@@ -440,6 +491,8 @@ Private Sub eUpdateLocalDMS()
 End Sub
 
 Private Sub eAppendToCentralDMS()
+    DoCmd.SetWarnings False
+    
     DoCmd.RunSQL "INSERT INTO study1 SELECT * FROM study where studyid >0"
     DoCmd.RunSQL "INSERT INTO factor1 SELECT * FROM factor where labelid > 0"
     DoCmd.RunSQL "INSERT INTO variate1 SELECT * FROM variate where variatid >0"
@@ -459,6 +512,8 @@ Private Sub eAppendToCentralDMS()
     DoCmd.RunSQL "INSERT INTO trait SELECT * FROM trait where traitid >0"
     DoCmd.RunSQL "INSERT INTO scale SELECT * FROM scale where scaleid >0"
     DoCmd.RunSQL "INSERT INTO tmethod SELECT * FROM tmethod where tmethid >0"
+    
+    DoCmd.SetWarnings True
 End Sub
 
 Private Sub eDropTempTables()
