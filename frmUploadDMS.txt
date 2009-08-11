@@ -1,0 +1,539 @@
+Option Compare Database
+
+Private Sub btnAppendToCentralDMS_Click()
+    If (Globals.mode < 3) Then
+        Dim msg As String
+        msg = "Update Local DMS must be performed first."
+        MsgBox msg, vbInformation, "Warning"
+    Else
+        Globals.mode = 0
+        eAppendToCentralDMS
+    End If
+End Sub
+
+'Events
+Private Sub btnCleanLocalDb_Click()
+    eUnlinkLocalTables
+    eUnlinkCentralTables
+    
+    eDropTempTables
+End Sub
+
+Private Sub btnExit_Click()
+    DoCmd.Close acForm, Me.Name
+End Sub
+
+Private Sub btnFilterStudy_Click()
+    'If (Globals.mode < 1) Then
+    If (False) Then
+        Dim msg As String
+        msg = "Link Tables must be performed first."
+        MsgBox msg, vbInformation, "Warning"
+    Else
+        Globals.mode = 2
+        DoCmd.OpenForm Form_frmSelectStudy.Name
+    End If
+End Sub
+
+Private Sub btnLinkTables_Click()
+    Globals.mode = 1
+    eLinkLocalTables
+    eLinkCentralTables
+End Sub
+
+Private Sub btnUpdateLocalDMS_Click()
+    If (Globals.mode < 2) Then
+        Dim msg As String
+        msg = "Filter Study must be performed first."
+        MsgBox msg, vbInformation, "Warning"
+    Else
+        Globals.mode = 3
+        
+        DoCmd.SetWarnings False
+        eCreateTempTables
+        eCreateNewId
+        eUpdateLocalDMS
+        DoCmd.SetWarnings True
+    End If
+End Sub
+'end events
+
+'link local tables
+Private Sub eLinkLocalTables()
+    Dim db As Database
+    Dim strInput As String, strDB As String
+    Set db = CurrentDb
+    
+    strDB = ""
+    strDB = LaunchCD(Me, "Please select the LOCAL DMS database.")
+
+    If IsNull(strDB) Or Trim(strDB) = "" Then
+       Exit Sub
+    End If
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "STUDY", "STUDY"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "FACTOR", "FACTOR"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "LEVEL_C", "LEVEL_C"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "LEVEL_N", "LEVEL_N"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "VARIATE", "VARIATE"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "EFFECT", "EFFECT"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "DMSATTR", "DMSATTR"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "DATA_C", "DATA_C"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "DATA_N", "DATA_N"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "OINDEX", "OINDEX"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "VEFFECT", "VEFFECT"
+    'added
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "TRAIT", "TRAIT"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "SCALE", "SCALE"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "TMETHOD", "TMETHOD"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "STEFFECT", "STEFFECT"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "LEVELS", "LEVELS"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "OBSUNIT", "OBSUNIT"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "REPRESTN", "REPRESTN"
+End Sub
+
+'link central tables
+Private Sub eLinkCentralTables()
+    Dim db As Database
+    Dim strInput As String, strDB As String
+    Set db = CurrentDb
+    
+    strDB = ""
+    strDB = LaunchCD(Me, "Please select the CENTRAL DMS database.")
+
+    If IsNull(strDB) Or Trim(strDB) = "" Then
+       Exit Sub
+    End If
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "STUDY", "STUDY1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "FACTOR", "FACTOR1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "LEVEL_C", "LEVEL_C1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "LEVEL_N", "LEVEL_N1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "LEVELS", "LEVELS1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "VARIATE", "VARIATE1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "EFFECT", "EFFECT1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "DMSATTR", "DMSATTR1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "DATA_C", "DATA_C1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "DATA_N", "DATA_N1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "OINDEX", "OINDEX1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "VEFFECT", "VEFFECT1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "STEFFECT", "STEFFECT1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "REPRESTN", "REPRESTN1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "OBSUNIT", "OBSUNIT1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "TRAIT", "TRAIT1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "SCALE", "SCALE1"
+    DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, "TMETHOD", "TMETHOD1"
+End Sub
+
+'delete linked local tables
+Private Sub eUnlinkLocalTables()
+    DoCmd.DeleteObject acTable, "STUDY"
+    DoCmd.DeleteObject acTable, "FACTOR"
+    DoCmd.DeleteObject acTable, "LEVEL_C"
+    DoCmd.DeleteObject acTable, "LEVEL_N"
+    DoCmd.DeleteObject acTable, "VARIATE"
+    DoCmd.DeleteObject acTable, "EFFECT"
+    DoCmd.DeleteObject acTable, "DMSATTR"
+    DoCmd.DeleteObject acTable, "DATA_C"
+    DoCmd.DeleteObject acTable, "DATA_N"
+    DoCmd.DeleteObject acTable, "OINDEX"
+    DoCmd.DeleteObject acTable, "VEFFECT"
+    DoCmd.DeleteObject acTable, "TRAIT"
+    DoCmd.DeleteObject acTable, "SCALE"
+    DoCmd.DeleteObject acTable, "TMETHOD"
+    DoCmd.DeleteObject acTable, "STEFFECT"
+    DoCmd.DeleteObject acTable, "LEVELS"
+    DoCmd.DeleteObject acTable, "OBSUNIT"
+    DoCmd.DeleteObject acTable, "REPRESTN"
+End Sub
+
+'delete linked central tables
+Private Sub eUnlinkCentralTables()
+    DoCmd.DeleteObject acTable, "STUDY1"
+    DoCmd.DeleteObject acTable, "FACTOR1"
+    DoCmd.DeleteObject acTable, "LEVEL_C1"
+    DoCmd.DeleteObject acTable, "LEVEL_N1"
+    DoCmd.DeleteObject acTable, "LEVELS1"
+    DoCmd.DeleteObject acTable, "VARIATE1"
+    DoCmd.DeleteObject acTable, "EFFECT1"
+    DoCmd.DeleteObject acTable, "DMSATTR1"
+    DoCmd.DeleteObject acTable, "DATA_C1"
+    DoCmd.DeleteObject acTable, "DATA_N1"
+    DoCmd.DeleteObject acTable, "OINDEX1"
+    DoCmd.DeleteObject acTable, "VEFFECT1"
+    DoCmd.DeleteObject acTable, "STEFFECT1"
+    DoCmd.DeleteObject acTable, "REPRESTN1"
+    DoCmd.DeleteObject acTable, "OBSUNIT1"
+    DoCmd.DeleteObject acTable, "TRAIT1"
+    DoCmd.DeleteObject acTable, "SCALE1"
+    DoCmd.DeleteObject acTable, "TMETHOD1"
+End Sub
+
+Private Sub eCreateTempTables()
+    
+    eDropTempTables
+    
+    '-- Create all new Tables
+    DoCmd.RunSQL "CREATE TABLE znewstudy ( studyid int )"
+    DoCmd.RunSQL "CREATE TABLE znewlabel ( labelid int )"
+    DoCmd.RunSQL "CREATE TABLE znewlevel ( levelno int )"
+    DoCmd.RunSQL "CREATE TABLE znewounit ( ounitid int )"
+    DoCmd.RunSQL "CREATE TABLE znewvariate ( variatid int )"
+    DoCmd.RunSQL "CREATE TABLE zneweffect ( effectid int )"
+    DoCmd.RunSQL "CREATE TABLE znewrepresno ( represno int )"
+    DoCmd.RunSQL "CREATE TABLE znewtrait ( traitid int )"
+    DoCmd.RunSQL "CREATE TABLE znewscale ( scaleid int )"
+    DoCmd.RunSQL "CREATE TABLE znewtmethod ( tmethid int )"
+    DoCmd.RunSQL "CREATE TABLE znewtid ( tid int )"
+    DoCmd.RunSQL "CREATE TABLE znewdmsattr ( dmsatid int )"
+    'temp tables
+    DoCmd.RunSQL "CREATE TABLE ztemptrait ( traitid int )"
+    DoCmd.RunSQL "CREATE TABLE ztempscale ( scaleid int )"
+    DoCmd.RunSQL "CREATE TABLE ztemptmethod ( tmethid int )"
+    DoCmd.RunSQL "CREATE TABLE ztempdmsattr ( dmsatid int )"
+    
+    '-- INSERT all IDs to the new tables
+    'normal tables
+    Utility.InsertData "znewstudy", "studyid", Globals.getSelectedStudy
+    DoCmd.RunSQL "INSERT INTO znewlabel SELECT labelid FROM factor where labelid<0 AND studyid IN (" & Globals.getSelectedStudy & ")"
+    DoCmd.RunSQL "INSERT INTO znewlevel SELECT DISTINCT t1.levelno FROM (SELECT DISTINCT levelno FROM level_c WHERE levelno<0 AND labelid IN (SELECT labelid FROM factor WHERE studyid IN (" & Globals.getSelectedStudy & ")) UNION SELECT DISTINCT levelno FROM level_n WHERE levelno<0 AND labelid IN (SELECT labelid FROM factor WHERE studyid IN (" & Globals.getSelectedStudy & "))) AS t1"
+    DoCmd.RunSQL "INSERT INTO znewounit SELECT DISTINCT ounitid FROM oindex WHERE ounitid<0 AND factorid IN (SELECT DISTINCT factorid FROM factor WHERE studyid IN (" & Globals.getSelectedStudy & "))"
+    DoCmd.RunSQL "INSERT INTO znewvariate SELECT variatid FROM variate WHERE variatid<0 AND studyid IN (" & Globals.getSelectedStudy & ")"
+    DoCmd.RunSQL "INSERT INTO zneweffect SELECT DISTINCT effectid FROM effect WHERE effectid<0 AND factorid IN (SELECT DISTINCT factorid FROM factor WHERE studyid IN (" & Globals.getSelectedStudy & "))"
+    DoCmd.RunSQL "INSERT INTO znewrepresno SELECT DISTINCT represno FROM effect WHERE represno<0 AND factorid IN (SELECT DISTINCT factorid FROM factor WHERE studyid IN (" & Globals.getSelectedStudy & "))"
+    
+    'inner join in subquery is not allowed, in with union in subquery also not allowed so will have to use temporary tables - whatever access db is outdate anyway
+    'trait - traitid
+    'DoCmd.RunSQL "INSERT INTO znewtrait SELECT traitid FROM trait WHERE traitid<0 AND traitid IN (SELECT DISTINCT traitid FROM factor WHERE studyid IN (" & Globals.getSelectedStudy & ") UNION SELECT DISTINCT traitid FROM variate WHERE studyid IN (" & Globals.getSelectedStudy & "))"
+    DoCmd.RunSQL "INSERT INTO ztemptrait SELECT DISTINCT traitid FROM factor WHERE traitid<0 AND studyid IN (" & Globals.getSelectedStudy & ")"
+    DoCmd.RunSQL "INSERT INTO ztemptrait SELECT DISTINCT traitid FROM variate WHERE traitid<0 AND studyid IN (" & Globals.getSelectedStudy & ")"
+    DoCmd.RunSQL "INSERT INTO znewtrait SELECT DISTINCT traitid FROM trait WHERE traitid IN (SELECT traitid FROM ztemptrait)"
+    
+    'scale
+    'DoCmd.RunSQL "INSERT INTO znewscale SELECT scaleid FROM scale WHERE scaleid<0 AND scaleid IN (SELECT DISTINCT scaleid FROM factor WHERE studyid IN (" & Globals.getSelectedStudy & ") UNION SELECT DISTINCT scaleid FROM variate WHERE studyid IN (" & Globals.getSelectedStudy & "))"
+    DoCmd.RunSQL "INSERT INTO ztempscale SELECT DISTINCT scaleid FROM factor WHERE scaleid<0 AND studyid IN (" & Globals.getSelectedStudy & ")"
+    DoCmd.RunSQL "INSERT INTO ztempscale SELECT DISTINCT scaleid FROM variate WHERE scaleid<0 AND studyid IN (" & Globals.getSelectedStudy & ")"
+    DoCmd.RunSQL "INSERT INTO znewscale SELECT scaleid FROM scale WHERE scaleid IN (SELECT scaleid FROM ztempscale)"
+    
+    'tmethod
+    'DoCmd.RunSQL "INSERT INTO znewtmethod SELECT tmethid FROM tmethod WHERE tmethid<0 AND tmethid IN (SELECT DISTINCT tmethid FROM factor WHERE studyid IN (" & Globals.getSelectedStudy & ") UNION SELECT DISTINCT tmethid FROM variate WHERE studyid IN (" & Globals.getSelectedStudy & "))"
+    DoCmd.RunSQL "INSERT INTO ztemptmethod SELECT DISTINCT tmethid FROM factor WHERE tmethid<0 AND studyid IN (" & Globals.getSelectedStudy & ")"
+    DoCmd.RunSQL "INSERT INTO ztemptmethod SELECT DISTINCT tmethid FROM variate WHERE tmethid<0 AND studyid IN (" & Globals.getSelectedStudy & ")"
+    DoCmd.RunSQL "INSERT INTO znewtmethod SELECT tmethid FROM tmethod WHERE tmethid IN (SELECT tmethid FROM ztemptmethod)"
+    
+    'trait - tid, same filter as traitid
+    'DoCmd.RunSQL "INSERT INTO znewtid SELECT DISTINCT tid FROM trait WHERE tid<0 AND traitid IN (SELECT DISTINCT traitid FROM factor WHERE studyid IN (" & Globals.getSelectedStudy & ") UNION SELECT DISTINCT traitid FROM variate WHERE studyid IN (" & Globals.getSelectedStudy & "))"
+    DoCmd.RunSQL "INSERT INTO znewtid SELECT DISTINCT tid FROM trait WHERE traitid IN (SELECT traitid FROM ztemptrait)"
+    
+    'dmsattr
+    'DoCmd.RunSQL "INSERT INTO znewdmsattr SELECT DISTINCT dmsatid FROM dmsattr where dmsatid<0 AND dmsatid IN (SELECT dmsatid FROM dmsattr WHERE dmsatrec IN (SELECT factorid FROM factor WHERE studyid IN(" & Globals.getSelectedStudy & ")) AND dmsatype=801 UNION SELECT dmsatid FROM dmsattr WHERE dmsatrec IN (SELECT variatid FROM variate WHERE studyid IN(" & Globals.getSelectedStudy & ")) AND dmsatype=802)"
+    DoCmd.RunSQL "INSERT INTO ztempdmsattr SELECT dmsatid FROM dmsattr WHERE dmsatid<0 AND dmsatrec IN (SELECT factorid FROM factor WHERE factorid<0 AND studyid IN (" & Globals.getSelectedStudy & ") AND dmsatype=801)"
+    DoCmd.RunSQL "INSERT INTO ztempdmsattr SELECT dmsatid FROM dmsattr WHERE dmsatid<0 AND dmsatrec IN (SELECT variatid FROM variate WHERE variatid<0 AND studyid IN (" & Globals.getSelectedStudy & ") AND dmsatype=802)"
+    DoCmd.RunSQL "INSERT INTO znewdmsattr SELECT DISTINCT dmsatid FROM dmsattr WHERE dmsatid IN (SELECT dmsatid FROM ztempdmsattr)"
+        
+    '-- ADD new Auto increment column to the tables
+    DoCmd.RunSQL "ALTER TABLE znewstudy ADD column  newstudyid long, id counter"
+    DoCmd.RunSQL "ALTER TABLE znewlabel ADD COLUMN newlabelid INT, id counter"
+    DoCmd.RunSQL "ALTER TABLE znewlevel ADD COLUMN newlevelno INT, id counter"
+    DoCmd.RunSQL "ALTER TABLE znewounit ADD COLUMN newounitid INT, id counter"
+    DoCmd.RunSQL "ALTER TABLE znewvariate ADD COLUMN newvariatid INT , id counter"
+    DoCmd.RunSQL "ALTER TABLE zneweffect ADD COLUMN neweffectid INT , id counter"
+    DoCmd.RunSQL "ALTER TABLE znewrepresno ADD COLUMN newrepresno INT , id counter"
+    DoCmd.RunSQL "ALTER TABLE znewtrait ADD COLUMN newtraitid INT , id counter"
+    DoCmd.RunSQL "ALTER TABLE znewscale ADD COLUMN newscaleid INT , id counter"
+    DoCmd.RunSQL "ALTER TABLE znewtmethod ADD COLUMN newtmethid INT , id counter"
+    DoCmd.RunSQL "ALTER TABLE znewtid ADD COLUMN newtid INT , id counter"
+    DoCmd.RunSQL "ALTER TABLE znewdmsattr ADD COLUMN newdmsatid INT , id counter"
+    
+    '-- Create indices
+    DoCmd.RunSQL "CREATE INDEX z_studyid ON znewstudy (studyid) WITH PRIMARY;"
+    DoCmd.RunSQL "CREATE INDEX z_labelid  ON znewlabel (labelid) WITH PRIMARY;"
+    DoCmd.RunSQL "CREATE INDEX z_levelno ON znewlevel (levelno);"
+    DoCmd.RunSQL "CREATE INDEX z_ounitid  ON znewounit (ounitid);"
+    DoCmd.RunSQL "CREATE INDEX z_variatid ON znewvariate (variatid) WITH PRIMARY;"
+    DoCmd.RunSQL "CREATE INDEX z_effectid  ON zneweffect (effectid);"
+    DoCmd.RunSQL "CREATE INDEX z_represno  ON znewrepresno (represno);"
+    DoCmd.RunSQL "CREATE INDEX z_traitid  ON znewtrait (traitid);"
+    DoCmd.RunSQL "CREATE INDEX z_scaleid ON znewscale (scaleid) WITH PRIMARY;"
+    DoCmd.RunSQL "CREATE INDEX z_tmethid  ON znewtmethod (tmethid) WITH PRIMARY;"
+    DoCmd.RunSQL "CREATE INDEX z_tid  ON znewtid (tid);"
+    DoCmd.RunSQL "CREATE INDEX z_dmsatid  ON znewdmsattr (dmsatid) WITH PRIMARY;"
+End Sub
+
+Private Sub eCreateNewId()
+    Dim maxStudyid As Long
+    Dim maxLevelno As Long
+    Dim maxLabelid As Long
+    Dim maxTid As Long
+    Dim maxScaleid As Long
+    Dim maxTmethid As Long
+    Dim maxVariatid As Long
+    Dim maxOunitid  As Long
+    Dim maxDmsatid  As Long
+    Dim maxEffectid   As Long
+    Dim maxRepresno  As Long
+    Dim maxTraitid  As Long
+    
+    Dim rst As DAO.Recordset, qdf As DAO.QueryDef, str As String
+    '-- GET MAXIMUM IDs for each table
+    
+    str = "SELECT MAX(studyid) FROM study1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxStudyid = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(levelno) FROM (SELECT levelno FROM level_c UNION SELECT levelno FROM level_n) AS t1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxLevelno = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(labelid) FROM factor1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxLabelid = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(tid) FROM trait1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxTid = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(scaleid) FROM scale1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxScaleid = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(tmethid) FROM tmethod1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxTmethid = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(variatid) FROM variate1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxVariatid = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(ounitid) FROM oindex1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxOunitid = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(dmsatid) FROM dmsattr1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxDmsatid = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(effectid) FROM effect1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxEffectid = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(represno) FROM effect1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxRepresno = rst.fields(0)
+    rst.Close
+    
+    str = "SELECT MAX(traitid) FROM trait1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    maxTraitid = rst.fields(0)
+    rst.Close
+    
+    DoCmd.RunSQL "UPDATE znewstudy set newstudyid = id + " & maxStudyid
+    DoCmd.RunSQL "UPDATE znewlabel set newlabelid = id + " & maxLevelno
+    DoCmd.RunSQL "UPDATE znewlevel set newlevelno = id + " & maxLabelid
+    DoCmd.RunSQL "UPDATE znewounit set newOunitid = id + " & maxOunitid
+    DoCmd.RunSQL "UPDATE znewvariate set newVariatid = id + " & maxVariatid
+    DoCmd.RunSQL "UPDATE zneweffect set newEffectid = id + " & maxEffectid
+    DoCmd.RunSQL "UPDATE znewrepresno set newRepresno = id + " & maxRepresno
+    DoCmd.RunSQL "UPDATE znewtrait set newTraitid = id + " & maxTraitid
+    DoCmd.RunSQL "UPDATE znewscale set newScaleid = id + " & maxScaleid
+    DoCmd.RunSQL "UPDATE znewtmethod set newTmethid = id + " & maxTmethid
+    DoCmd.RunSQL "UPDATE znewtid set newtid = id + " & maxTid
+    DoCmd.RunSQL "UPDATE znewdmsattr set newdmsatid = id + " & maxDmsatid
+End Sub
+
+Private Sub eUpdateLocalDMS()
+    DoCmd.RunSQL "UPDATE study s, znewstudy z set s.studyid = z.newstudyid where s.studyid = z.studyid ;"
+    DoCmd.RunSQL "UPDATE study s, znewstudy z set s.SHIERARCHY = z.newstudyid where s.SHIERARCHY  = z.studyid ;" 'AMP: added
+    DoCmd.RunSQL "UPDATE factor f, znewstudy z set f.studyid = z.newstudyid where f.studyid = z.studyid ;"
+    DoCmd.RunSQL "UPDATE variate v, znewstudy z set v.studyid = z.newstudyid where v.studyid = z.studyid ;"
+    DoCmd.RunSQL "UPDATE steffect s, znewstudy z set s.studyid = z.newstudyid where s.studyid = z.studyid ;"
+    
+    '-- Update labelid
+    DoCmd.RunSQL "UPDATE factor f, znewlabel z set f.labelid = z.newlabelid where f.labelid = z.labelid;"
+    DoCmd.RunSQL "UPDATE level_n l, znewlabel z set l.labelid = z.newlabelid where l.labelid = z.labelid;"
+    DoCmd.RunSQL "UPDATE level_c l, znewlabel z set l.labelid = z.newlabelid where l.labelid = z.labelid;"
+    
+    '-- Update factorid
+    DoCmd.RunSQL "UPDATE factor f, znewlabel z set f.factorid = z.newlabelid where f.factorid = z.labelid;"
+    DoCmd.RunSQL "UPDATE effect e, znewlabel z set e.factorid = z.newlabelid where e.factorid = z.labelid;"
+    DoCmd.RunSQL "UPDATE levels l, znewlabel z set l.factorid = z.newlabelid where l.factorid = z.labelid;"
+    DoCmd.RunSQL "UPDATE level_n l, znewlabel z set l.factorid = z.newlabelid where l.factorid = z.labelid;"
+    DoCmd.RunSQL "UPDATE level_c l, znewlabel z set l.factorid = z.newlabelid where l.factorid = z.labelid;"
+    DoCmd.RunSQL "UPDATE oindex o, znewlabel z set o.factorid = z.newlabelid where o.factorid = z.labelid;"
+    
+    '-- Update levelno
+    DoCmd.RunSQL "UPDATE levels l, znewlevel z set l.levelno= z.newLevelno where l.levelno = z.levelno;"
+    DoCmd.RunSQL "UPDATE level_n l, znewlevel z set l.levelno= z.newLevelno where l.levelno = z.levelno;"
+    DoCmd.RunSQL "UPDATE level_c l, znewlevel z set l.levelno= z.newLevelno where l.levelno = z.levelno;"
+    DoCmd.RunSQL "UPDATE oindex o, znewlevel z set o.levelno= z.newLevelno where o.levelno = z.levelno;"
+    
+    '-- Update ounitid
+    DoCmd.RunSQL "UPDATE oindex o, znewounit z set o.ounitid = z.newounitid where o.ounitid = z.ounitid;"
+    DoCmd.RunSQL "UPDATE data_n d, znewounit z set d.ounitid = z.newounitid where d.ounitid = z.ounitid;"
+    DoCmd.RunSQL "UPDATE data_c d, znewounit z set d.ounitid = z.newounitid where d.ounitid = z.ounitid;"
+    DoCmd.RunSQL "UPDATE obsunit o, znewounit z set o.ounitid = z.newounitid where o.ounitid = z.ounitid;"
+    
+    '-- Update variateID
+    DoCmd.RunSQL "UPDATE variate v, znewvariate z set v.variatid  = z.newVariatid where v.variatid = z.variatid;"
+    DoCmd.RunSQL "UPDATE data_n d, znewvariate z set d.variatid  = z.newVariatid where d.variatid = z.variatid;"
+    DoCmd.RunSQL "UPDATE data_c d, znewvariate z set d.variatid  = z.newVariatid where d.variatid = z.variatid;"
+    DoCmd.RunSQL "UPDATE veffect e, znewvariate z set e.variatid  = z.newVariatid where e.variatid = z.variatid;"
+    
+    '-- Update effectid
+    DoCmd.RunSQL "UPDATE effect e, zneweffect z set e.effectid = z.newEffectid where e.effectid = z.effectid;"
+    DoCmd.RunSQL "UPDATE steffect e, zneweffect z set e.effectid = z.newEffectid where e.effectid = z.effectid;"
+    DoCmd.RunSQL "UPDATE obsunit o, zneweffect z set o.effectid = z.newEffectid where o.effectid = z.effectid;"
+    DoCmd.RunSQL "UPDATE represtn r, zneweffect z set r.effectid = z.newEffectid where r.effectid = z.effectid;"
+    
+    '-- Update represno
+    DoCmd.RunSQL "UPDATE oindex o, znewrepresno z set o.represno = z.newrepresno where o.represno = z.represno;"
+    DoCmd.RunSQL "UPDATE effect e, znewrepresno z set e.represno = z.newrepresno where e.represno = z.represno;"
+    DoCmd.RunSQL "UPDATE veffect e, znewrepresno z set e.represno = z.newrepresno where e.represno= z.represno;"
+    DoCmd.RunSQL "UPDATE represtn r, znewrepresno z set r.represno = z.newrepresno where r.represno = z.represno;"
+    
+    '-- Update dmsatid
+    DoCmd.RunSQL "UPDATE dmsattr d, znewdmsattr z set d.dmsatid = z.newdmsatid where d.dmsatid = z.dmsatid;"
+    DoCmd.RunSQL "UPDATE dmsattr d, znewlabel z set d.dmsatrec = z.newlabelid where d.dmsatab = 'FACTOR' and d.dmsatrec = z.labelid;"
+    DoCmd.RunSQL "UPDATE dmsattr d, znewvariate z set d.dmsatrec = z.newvariatid where d.dmsatab = 'VARIATE' and d.dmsatrec = z.variatid;"
+    DoCmd.RunSQL "UPDATE dmsattr d, znewrepresno z set d.dmsatrec = z.newrepresno where d.dmsatab = 'DATASET' and d.dmsatrec = z.represno;"
+    '-- TODO update when d.dmsatab = 'LIST'
+    
+    '-- Update traitid
+    DoCmd.RunSQL "UPDATE trait t, znewtrait z set t.traitid = z.newtraitid where t.traitid = z.traitid;"
+    DoCmd.RunSQL "UPDATE scale s, znewtrait z set s.traitid = z.newtraitid where s.traitid = z.traitid;"
+    DoCmd.RunSQL "UPDATE tmethod t, znewtrait z set t.traitid = z.newtraitid where t.traitid = z.traitid;"
+    DoCmd.RunSQL "UPDATE factor f, znewtrait z set f.traitid = z.newtraitid where f.traitid = z.traitid;"
+    DoCmd.RunSQL "UPDATE variate v, znewtrait z set v.traitid = z.newtraitid where v.traitid = z.traitid;"
+    
+    '-- Udpate tid
+    DoCmd.RunSQL "UPDATE trait t, znewtid z set t.tid = z.newtid where t.tid = z.tid;"
+    
+    '-- Update scaleid
+    DoCmd.RunSQL "UPDATE scale s, znewscale z set s.scaleid = z.newscaleid where s.scaleid = z.scaleid;"
+    DoCmd.RunSQL "UPDATE factor f, znewscale z set f.scaleid = z.newscaleid where f.scaleid = z.scaleid;"
+    DoCmd.RunSQL "UPDATE variate v, znewscale z set v.scaleid = z.newscaleid where v.scaleid = z.scaleid;"
+    
+    '-- Update tmethid
+    DoCmd.RunSQL "UPDATE tmethod t, znewtmethod z set t.tmethid = z.newtmethid where t.tmethid = z.tmethid;"
+    DoCmd.RunSQL "UPDATE factor f, znewtmethod z set f.tmethid = z.newtmethid where f.tmethid = z.tmethid;"
+    DoCmd.RunSQL "UPDATE variate v, znewtmethod z set v.tmethid = z.newtmethid where v.tmethid = z.tmethid;"
+End Sub
+
+Private Sub eAppendToCentralDMS()
+    DoCmd.RunSQL "INSERT INTO study1 SELECT * FROM study where studyid >0"
+    DoCmd.RunSQL "INSERT INTO factor1 SELECT * FROM factor where labelid > 0"
+    DoCmd.RunSQL "INSERT INTO variate1 SELECT * FROM variate where variatid >0"
+    DoCmd.RunSQL "INSERT INTO level_n1 SELECT * FROM level_n where levelno>0"
+    DoCmd.RunSQL "INSERT INTO level_c1 SELECT * FROM level_c where levelno>0"
+    DoCmd.RunSQL "INSERT INTO levels1 SELECT * FROM levels where levelno>0"
+    DoCmd.RunSQL "INSERT INTO data_n1 SELECT * FROM data_n where ounitid>0"
+    DoCmd.RunSQL "INSERT INTO data_c1 SELECT * FROM data_c where ounitid>0"
+    DoCmd.RunSQL "INSERT INTO effect1 SELECT * FROM effect where effectid>0"
+    DoCmd.RunSQL "INSERT INTO veffect1 SELECT * FROM veffect where variatid>0"
+    DoCmd.RunSQL "INSERT INTO steffect1 SELECT * FROM steffect where effectid>0"
+    DoCmd.RunSQL "INSERT INTO oindex1 SELECT * FROM oindex where ounitid>0"
+    DoCmd.RunSQL "INSERT INTO represtn1 SELECT * FROM represtn where represno>0"
+    DoCmd.RunSQL "INSERT INTO obsunit1 SELECT * FROM obsunit where ounitid>0"
+    DoCmd.RunSQL "INSERT INTO dmsattr1 SELECT * FROM dmsattr where dmsatid >0"
+    
+    DoCmd.RunSQL "INSERT INTO trait SELECT * FROM trait where traitid >0"
+    DoCmd.RunSQL "INSERT INTO scale SELECT * FROM scale where scaleid >0"
+    DoCmd.RunSQL "INSERT INTO tmethod SELECT * FROM tmethod where tmethid >0"
+End Sub
+
+Private Sub eDropTempTables()
+    If FindTable("znewstudy") Then
+       DoCmd.RunSQL "DROP TABLE znewstudy"
+    End If
+    If FindTable("znewlabel") Then
+       DoCmd.RunSQL "DROP TABLE znewlabel "
+    End If
+    'DROP TABLE IF EXISTS znewlabel ;
+    If FindTable("znewlabel") Then
+       DoCmd.RunSQL "DROP TABLE znewlabel "
+    End If
+    'DROP TABLE IF EXISTS znewlevel ;
+    If FindTable("znewlevel") Then
+       DoCmd.RunSQL "DROP TABLE znewlevel"
+    End If
+    'DROP TABLE IF EXISTS znewounit ;
+    If FindTable("znewounit") Then
+       DoCmd.RunSQL "DROP TABLE znewounit"
+    End If
+    'DROP TABLE IF EXISTS znewvariate ;
+    If FindTable("znewvariate") Then
+       DoCmd.RunSQL "DROP TABLE znewvariate"
+    End If
+    'DROP TABLE IF EXISTS zneweffect ;
+    If FindTable("zneweffect") Then
+       DoCmd.RunSQL "DROP TABLE zneweffect"
+    End If
+    'DROP TABLE IF EXISTS znewrepresno ;
+    If FindTable("znewrepresno") Then
+       DoCmd.RunSQL "DROP TABLE znewrepresno"
+    End If
+    'DROP TABLE IF EXISTS znewtrait ;
+    If FindTable("znewtrait") Then
+       DoCmd.RunSQL "DROP TABLE znewtrait"
+    End If
+    'DROP TABLE IF EXISTS znewscale ;
+    If FindTable("znewscale") Then
+       DoCmd.RunSQL "DROP TABLE znewscale"
+    End If
+    'DROP TABLE IF EXISTS znewtmethod ;
+    If FindTable("znewtmethod") Then
+       DoCmd.RunSQL "DROP TABLE znewtmethod"
+    End If
+    'DROP TABLE IF EXISTS znewtid ;
+    If FindTable("znewtid") Then
+       DoCmd.RunSQL "DROP TABLE znewtid"
+    End If
+    'DROP TABLE IF EXISTS znewdmsattr ;
+    If FindTable("znewdmsattr") Then
+       DoCmd.RunSQL "DROP TABLE znewdmsattr"
+    End If
+    'DROP TABLE IF EXISTS ztemplevel ;
+    If FindTable("ztemplevel") Then
+       DoCmd.RunSQL "DROP TABLE ztemplevel"
+    End If
+    'DROP TABLE IF EXISTS ztemptrait ;
+    If FindTable("ztemptrait") Then
+       DoCmd.RunSQL "DROP TABLE ztemptrait"
+    End If
+    'DROP TABLE IF EXISTS ztemptmethod ;
+    If FindTable("ztemptmethod") Then
+       DoCmd.RunSQL "DROP TABLE ztemptmethod"
+    End If
+    'DROP TABLE IF EXISTS ztempscale ;
+    If FindTable("ztempscale") Then
+       DoCmd.RunSQL "DROP TABLE ztempscale"
+    End If
+    'DROP TABLE IF EXISTS ztempdmsattr ;
+    If FindTable("ztempdmsattr") Then
+       DoCmd.RunSQL "DROP TABLE ztempdmsattr"
+    End If
+End Sub
+
+Private Sub Form_Load()
+    Globals.mode = 0
+End Sub

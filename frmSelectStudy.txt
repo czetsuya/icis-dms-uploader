@@ -1,0 +1,56 @@
+Option Compare Database
+
+Private Sub btnCancel_Click()
+    DoCmd.Close acForm, Me.Name
+    DoCmd.OpenForm Form_frmUploadDMS.Name
+End Sub
+
+Private Sub btnProcess_Click()
+    Dim oItem As Variant
+    Dim sTemp As String
+    Dim iCount As Integer
+    
+    iCount = 0
+            
+    If lstStudy.ItemsSelected.Count <> 0 Then
+        For Each oItem In lstStudy.ItemsSelected
+            If iCount = 0 Then
+                sTemp = sTemp & lstStudy.ItemData(oItem)
+                iCount = iCount + 1
+            Else
+                sTemp = sTemp & "," & lstStudy.ItemData(oItem)
+                iCount = iCount + 1
+            End If
+        Next oItem
+    Else
+        MsgBox "Nothing was selected from the list", vbInformation
+        Exit Sub  'Nothing was selected
+    End If
+    
+    Globals.setSelectedStudy sTemp
+    MsgBox "You have selected study ids: " & vbCrLf & Globals.getSelectedStudy, vbInformation, "Selected Study IDs"
+    DoCmd.Close acForm, Me.Name
+End Sub
+
+Private Sub Form_Load()
+    Dim str As String
+    
+    'create the stored query
+    str = "SELECT studyid AS STUDY_ID, sname AS STUDY_NAME, title AS STUDY_TITLE FROM study WHERE studyid<0 ORDER BY sname ASC"
+    If FindQuery("selectStudy") Then
+        DoCmd.DeleteObject acQuery, "selectStudy"
+        CurrentDb.QueryDefs.Refresh
+    End If
+    
+    'checks if there are study
+    Set qdf = CurrentDb.CreateQueryDef("selectStudy", str)
+    If (qdf.OpenRecordset().Properties.Count = 0) Then
+        MsgBox "No study found."
+        DoCmd.Close acForm, Me.Name
+    Else
+        lstStudy.RowSourceType = "Table/Query"
+        lstStudy.RowSource = "selectStudy"
+    End If
+    
+    qdf.Close
+End Sub
