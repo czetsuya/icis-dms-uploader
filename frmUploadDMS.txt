@@ -14,31 +14,44 @@ End Sub
 
 'Events
 Private Sub btnCleanLocalDb_Click()
-    eUnlinkLocalTables
-    eUnlinkCentralTables
+    If (isTableExist("study")) Then
+        eUnlinkLocalTables
+    End If
     
-    eDropTempTables
+    If (isTableExist("study1")) Then
+        eUnlinkCentralTables
+    End If
+    
+    If (isTableExist("znewstudy")) Then
+        eDropTempTables
+    End If
 End Sub
 
 Private Sub btnExit_Click()
-    DoCmd.Close acForm, Me.Name
+    DoCmd.Close
 End Sub
 
 Private Sub btnFilterStudy_Click()
-    'If (Globals.mode < 1) Then
-    If (False) Then
-        Dim msg As String
-        msg = "Link Tables must be performed first."
-        MsgBox msg, vbInformation, "Warning"
+    If isTableExist("study") And isTableExist("study1") Then
+        If (False) Then
+            Dim msg As String
+            msg = "Link Tables must be performed first."
+            MsgBox msg, vbInformation, "Warning"
+        Else
+            Globals.mode = 2
+            DoCmd.OpenForm Form_frmSelectStudy.name
+        End If
     Else
-        Globals.mode = 2
-        DoCmd.OpenForm Form_frmSelectStudy.Name
+        MsgBox "Please link the local and central tables first.", vbInformation
     End If
 End Sub
 
 Private Sub btnLinkTables_Click()
     Globals.mode = 1
-    If (eLinkLocalTables) Then
+    If (Not isTableExist("study")) Then
+        eLinkLocalTables
+    End If
+    If (Not isTableExist("study1")) Then
         eLinkCentralTables
     End If
 End Sub
@@ -48,6 +61,7 @@ Private Sub btnUpdateLocalDMS_Click()
         Dim msg As String
         msg = "Filter Study must be performed first."
         MsgBox msg, vbInformation, "Warning"
+        Exit Sub
     Else
         Globals.mode = 3
         
@@ -56,10 +70,19 @@ Private Sub btnUpdateLocalDMS_Click()
         eCreateNewId
         eUpdateLocalDMS
         DoCmd.SetWarnings True
+        
+        MsgBox "Local DMS has been successfully updated.", vbInformation, "Local DMS Update"
     End If
-    MsgBox "Local DMS has been successfully updated.", vbInformation, "Local DMS Update"
 End Sub
 'end events
+
+Function isTableExist(tblname As String) As Boolean
+    If (FindTable(tblname)) Then
+        isTableExist = True
+    Else
+        isTableExist = False
+    End If
+End Function
 
 'link local tables
 Private Function eLinkLocalTables() As Boolean
