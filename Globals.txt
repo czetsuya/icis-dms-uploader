@@ -1,0 +1,12 @@
+Option Compare Database
+
+Private selectedStudy As String
+Public mode As Integer
+
+Sub setSelectedStudy(str As String)
+    selectedStudy = str
+End Sub
+
+Function getSelectedStudy() As String
+    getSelectedStudy = selectedStudy
+End Function
