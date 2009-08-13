@@ -1,0 +1,36 @@
+Option Compare Database
+Option Explicit
+
+Function FindTable(ByVal strQryName As String) As Integer
+'Returns true if the specified table exists in the database
+     Dim db As Database, tdf As TableDef
+     Set db = CurrentDb
+     For Each tdf In db.TableDefs
+          If tdf.name = strQryName Then
+             FindTable = True
+             Exit For
+          End If
+     Next
+End Function
+
+Function FindQuery(ByVal strQryName As String) As Integer
+'Returns true if the specified query exists in the database
+     Dim db As Database, qdf As QueryDef
+     Set db = CurrentDb
+     For Each qdf In db.QueryDefs
+          If qdf.name = strQryName Then
+             FindQuery = True
+             Exit For
+          End If
+     Next
+End Function
+
+Public Sub InsertData(tblname As String, colName As String, val As String)
+    Dim fields() As String, s As String
+    Dim i As Integer
+    fields() = Split(val, ",")
+    For i = 0 To UBound(fields)
+        s = "INSERT INTO " & tblname & "(" & colName & ") VALUES (" & fields(i) & ")"
+        DoCmd.RunSQL s
+    Next
+End Sub
