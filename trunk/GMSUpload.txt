@@ -1,0 +1,474 @@
+'@author czetsuya
+'@since 2009.08.24
+'gsm functions
+
+Option Compare Database
+
+Sub gLinkTable()
+    gLinkLocal
+    gLinkCentral
+End Sub
+
+Function gLinkLocal()
+    Dim db As Database
+    Dim strInput As String, strDB As String
+    Set db = CurrentDb
+    
+    strDB = ""
+    strDB = LaunchCD(Form_frmUploadDMS, "Please select the LOCAL DMS database.")
+
+    If IsNull(strDB) Or Trim(strDB) = "" Then
+       gLinkLocal = False
+       Exit Function
+    End If
+        
+    Dim temp(0 To 13) As String
+    temp(0) = "ATRIBUTS"
+    temp(1) = "CHANGES"
+    temp(2) = "DATA_N"
+    temp(3) = "FACTOR"
+    temp(4) = "GERMPLSM"
+    temp(5) = "LEVEL_N"
+    temp(6) = "LISTDATA"
+    temp(7) = "LOCATION"
+    temp(8) = "LOCDES"
+    temp(9) = "NAMES"
+    temp(10) = "OINDEX"
+    temp(11) = "PROGNTRS"
+    temp(12) = "STUDY"
+    temp(13) = "VARIATE"
+    For Each tbl In temp
+        If Not FindTable(tbl) Then
+            DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, tbl, tbl
+        End If
+    Next
+End Function
+
+Function gLinkCentral()
+    Dim db As Database
+    Dim strInput As String, strDB As String
+    Set db = CurrentDb
+    
+    strDB = ""
+    strDB = LaunchCD(Form_frmUploadDMS, "Please select the CENTRAL DMS database.")
+
+    If IsNull(strDB) Or Trim(strDB) = "" Then
+       gLinkCentral = False
+       Exit Function
+    End If
+    
+    Dim temp(0 To 7) As String
+    temp(0) = "ATRIBUTS"
+    temp(1) = "CHANGES"
+    temp(2) = "GERMPLSM"
+    temp(3) = "LOCATION"
+    temp(4) = "LOCDES"
+    temp(5) = "METHODS"
+    temp(6) = "METHODS"
+    temp(7) = "PROGNTRS"
+    For Each tbl In temp
+        If Not FindTable(tbl & 1) Then
+            DoCmd.TransferDatabase acLink, "Microsoft Access", strDB, acTable, tbl, tbl & 1
+        End If
+    Next
+    
+End Function
+
+'@author czetsuya
+'@since 2009.08.24
+'Check Local Database integrity CHKL01A - CHKL01J3
+Sub gCheckIntegrity()
+    Dim str As String
+    str = "SELECT GERMPLSM.GID, GERMPLSM.METHN, METHODS1.MTYPE AS Expr1, GERMPLSM.GNPGS, GERMPLSM.GRPLCE FROM GERMPLSM, METHODS1 WHERE (((GERMPLSM.GNPGS)<>-1) AND ((METHODS1.MTYPE)='DER'))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01A: GNPGS for derivatives.", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT GERMPLSM.GID, GERMPLSM.METHN, METHODS1.MTYPE AS Expr1, GERMPLSM.GNPGS, GERMPLSM.GRPLCE FROM GERMPLSM, METHODS1 WHERE (((GERMPLSM.GNPGS)<0) AND ((METHODS1.MTYPE)='GEN'))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01B: GNPGS for generatives.", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT GERMPLSM.GID FROM GERMPLSM WHERE (((GERMPLSM.GID)=[GERMPLSM].[GPID1]))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01C: Check GPID1 <> GID for any record.", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT GERMPLSM.GID FROM GERMPLSM WHERE (((GERMPLSM.GID)=[GERMPLSM].[GPID2]))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01D: Check GPID2 <> GID for any record", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT GERMPLSM.GID, GERMPLSM.GNPGS, GERMPLSM.GPID1, GERMPLSM.GPID2 FROM GERMPLSM WHERE (((GERMPLSM.GNPGS)=-1) AND ((GERMPLSM.GPID1)=0) AND ((GERMPLSM.GPID2)<>0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01E: Check that all derivatives with known source (GPID2 <> 0) have known group (GPID1 <> 0)", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT GERMPLSM.GID, GERMPLSM.GPID1, GERMPLSM.GPID2 FROM GERMPLSM WHERE (((GERMPLSM.GNPGS)=-1) AND ((GERMPLSM.GRPLCE)=0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01F1: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHKL01F1.GID, GERMPLSM.GID, GERMPLSM.GPID1, GERMPLSM.GPID2 FROM CHKL01F1 INNER JOIN GERMPLSM ON CHKL01F1.GPID2 = GERMPLSM.GID WHERE (((CHKL01F1.GID)=[GERMPLSM].[GID]))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01F2: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHKL01F1.GID, GERMPLSM.GID, GERMPLSM.GPID1, GERMPLSM.GPID2 FROM CHKL01F1 INNER JOIN GERMPLSM ON CHKL01F1.GPID2 = GERMPLSM.GID"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01F3: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHKL01F3.CHKL01F1.GID, GERMPLSM.GID, GERMPLSM.GPID1, GERMPLSM.GPID2 FROM CHKL01F3 INNER JOIN GERMPLSM ON CHKL01F3.GPID2 = GERMPLSM.GID WHERE (((CHKL01F3.CHKL01F1.GID)=[GERMPLSM].[GID]))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01F4: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT GERMPLSM.GID, GERMPLSM1.GID, GERMPLSM1.GRPLCE FROM GERMPLSM INNER JOIN GERMPLSM1 ON GERMPLSM.GPID1 = GERMPLSM1.GID WHERE (((GERMPLSM1.GRPLCE)<>0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01G1: Check no replaced central GID should be referenced in the local GMS.", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT GERMPLSM.GID, GERMPLSM1.GID, GERMPLSM1.GRPLCE FROM GERMPLSM INNER JOIN GERMPLSM1 ON GERMPLSM.GPID2 = GERMPLSM1.GID WHERE (((GERMPLSM1.GRPLCE)<>0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01G2: Check no replaced central GID should be referenced in the local GMS.", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHANGES.CTABLE, CHANGES.CFIELD, GERMPLSM1.GRPLCE, CHANGES.CTO, CHANGES.CSTATUS FROM CHANGES INNER JOIN GERMPLSM1 ON CHANGES.CRECORD = GERMPLSM1.GID WHERE (((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GID') AND ((GERMPLSM1.GRPLCE)<>0) AND ((CHANGES.CSTATUS)=0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01H: Check that no replacements in the CHANGES table have already been replaced or deleted in the central database.", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHANGES.CTABLE, CHANGES.CFIELD, CHANGES.CTO, CHANGES.CSTATUS FROM CHANGES INNER JOIN GERMPLSM ON CHANGES.CRECORD = GERMPLSM.GID WHERE (((CHANGES.CTABLE)='GERMPLASM') AND ((CHANGES.CFIELD)='GID') AND ((CHANGES.CTO)<>[GERMPLSM].[GRPLCE]) AND ((CHANGES.CSTATUS)=0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01I1: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHANGES.CTABLE, CHANGES.CFIELD, CHANGES.CTO, CHANGES.CSTATUS FROM CHANGES INNER JOIN GERMPLSM ON CHANGES.CRECORD = GERMPLSM.GID WHERE (((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GPID1') AND ((CHANGES.CTO)<>[GERMPLSM].[GPID1]) AND ((CHANGES.CSTATUS)=0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01I2: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHANGES.CTABLE, CHANGES.CFIELD, CHANGES.CTO, CHANGES.CSTATUS FROM CHANGES INNER JOIN GERMPLSM ON CHANGES.CRECORD = GERMPLSM.GID WHERE (((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GPID2') AND ((CHANGES.CTO)<>[GERMPLSM].[GPID2]) AND ((CHANGES.CSTATUS)=0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01I3: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHANGES.CTABLE, CHANGES.CFIELD, CHANGES.CTO, CHANGES.CSTATUS FROM CHANGES INNER JOIN GERMPLSM ON CHANGES.CRECORD = GERMPLSM.GID WHERE (((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GDATE') AND((CHANGES.CTO)<>[GERMPLSM].[GDATE]) AND ((CHANGES.CSTATUS)=0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01I4: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHANGES.CTABLE, CHANGES.CFIELD, CHANGES.CTO, CHANGES.CSTATUS FROM CHANGES INNER JOIN GERMPLSM ON CHANGES.CRECORD = GERMPLSM.GID WHERE (((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GLOCN') AND ((CHANGES.CTO)<>[GERMPLSM].[GLOCN]) AND ((CHANGES.CSTATUS)=0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01I5: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHANGES.CTABLE, CHANGES.CFIELD, CHANGES.CTO, CHANGES.CSTATUS FROM CHANGES INNER JOIN GERMPLSM ON CHANGES.CRECORD = GERMPLSM.GID WHERE (((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='METHN') AND((CHANGES.CTO)<>[GERMPLSM].[METHN]) AND ((CHANGES.CSTATUS)=0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01I6: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHANGES.CTABLE, CHANGES.CFIELD, CHANGES.CTO, CHANGES.CSTATUS FROM CHANGES INNER JOIN GERMPLSM ON CHANGES.CRECORD = GERMPLSM.GID WHERE (((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GNPGS') AND ((CHANGES.CTO)<>[GERMPLSM].[GNPGS]) AND ((CHANGES.CSTATUS)=0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01I7: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT CHANGES.CTABLE, CHANGES.CFIELD, CHANGES.CTO, CHANGES.CSTATUS FROM CHANGES INNER JOIN GERMPLSM ON CHANGES.CRECORD = GERMPLSM.GID WHERE (((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GREF') AND ((CHANGES.CTO)<>[GERMPLSM].[GREF]) AND ((CHANGES.CSTATUS)=0))"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01I8: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT GERMPLSM.GID, GERMPLSM.GPID1, GERMPLSM.MGID, GERMPLSM1.MGPID1, GERMPLSM.GRPLCE FROM GERMPLSM, GERMPLSM1 WHERE GERMPLSM.GPID1<>GERMPLSM1.GPID1 AND GERMPLSM1.MGPID1<>0 AND GERMPLSM.GRPLCE=0, GERMPLSM1.GNPGS=-1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01J1: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT GERMPLSM.GID, GERMPLSM.GPID1, GERMPLSM.MGID, GERMPLSM1.MGPID1, GERMPLSM.GRPLCE FROM GERMPLSM, GERMPLSM1 WHERE GERMPLSM.GPID1<>GERMPLSM1.GID AND GERMPLSM1.MGPID1=0 AND GERMPLSM.GRPLCE=0 AND GERMPLSM1.GNPGS=-1"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01J2: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+    
+    str = "SELECT GERMPLSM.GID, GERMPLSM.GPID1, GERMPLSM.MGID, GERMPLSM1.GNPGS, GERMPLSM1.GRPLCE, GERMPLSM.GRPLCE FROM GERMPLSM, GERMPLSM1 WHERE GERMPLSM.GPID1<>GERMPLSM1.GID AND GERMPLSM1.GNPGS>0 AND GERMPLSM.GRPLCE=0"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox "CHKL01J3: ", vbExclamation, "Error"
+        Exit Sub
+    End If
+    rst.Close
+End Sub
+
+'@author czetsuya
+'@since 2009.08.24
+'Prepare local update environment UPD03A - UPD03G2
+Sub gPreLocUpdEnvt()
+    DoCmd.RunSQL "UPDATE GERMPLSM SET GERMPLSM.LGID = [germplsm].[gid]"
+    DoCmd.RunSQL "CREATE TABLE MAXTABLE (MAXID LONG, GID LONG, NID LONG, LOCID LONG, AID LONG, CID LONG, LDID LONG)"
+    DoCmd.RunSQL "INSERT INTO MAXTABLE VALUES (1,0,0,0,0,0,0)"
+    DoCmd.RunSQL "UPDATE MAXTABLE SET MAXTABLE.GID = (Select MAX(GERMPLSM1.GID) FROM GERMPLSM1) WHERE MAXID=1"
+    DoCmd.RunSQL "UPDATE MAXTABLE SET MAXTABLE.NID = (Select MAX(NAMES1.NID) FROM NAMES1) WHERE MAXID=1"
+    DoCmd.RunSQL "UPDATE MAXTABLE SET MAXTABLE.LOCID = (Select MAX(LOCATION1.LOCID) FROM LOCATION1) WHERE MAXID=1"
+    DoCmd.RunSQL "UPDATE MAXTABLE SET MAXTABLE.AID = (Select MAX(ATRIBUTS1.AID) FROM ATRIBUTS1) WHERE MAXID=1"
+    DoCmd.RunSQL "UPDATE MAXTABLE SET MAXTABLE.CID = (Select MAX(CHANGES1.CID) FROM CHANGES1) WHERE MAXID=1"
+    DoCmd.RunSQL "UPDATE MAXTABLE SET MAXTABLE.LDID = (Select MAX(LOCDES1.LDID) FROM LOCDES1) WHERE MAXID=1"
+    DoCmd.RunSQL "Create Table [UPDATEGID]  (GID Long, LGID Long)"
+    DoCmd.RunSQL "INSERT INTO [UPDATEGID] ( GID, LGID ) SELECT MaxTable.GID, MaxTable.GID FROM MaxTable"
+    DoCmd.RunSQL "CREATE TABLE UpdateLOC (LOCID LONG, LLOCID LONG)"
+    DoCmd.RunSQL "INSERT INTO UpdateLOC ( LOCID, LLOCID ) SELECT MaxTable.LOCID, MaxTable.LOCID FROM MaxTable"
+    DoCmd.RunSQL "Create Table [UPDCHNG]  (CID Counter, LCID Long)"
+    DoCmd.RunSQL "INSERT INTO UPDCHNG ( CID, LCID ) SELECT MAXTABLE.CID, MAXTABLE.CID FROM MAXTABLE"
+    DoCmd.RunSQL "Create Table [UPDNAME]  (NID Long, LNID Long)"
+    DoCmd.RunSQL "INSERT INTO UPDNAME ( NID, LNID ) SELECT MAXTABLE.NID, MAXTABLE.NID FROM MAXTABLE"
+    DoCmd.RunSQL "Create Table [UPDATRIBUTS]  (AID Long, LAID Long)"
+    DoCmd.RunSQL "INSERT INTO UPDATRIBUTS ( AID, LAID ) SELECT MAXTABLE.AID, MAXTABLE.AID FROM MAXTABLE"
+End Sub
+
+'@author czetsuya
+'@since 2009.08.25
+'Update Locations UPD04A - UPD04I
+Sub gUpdateLocations()
+    DoCmd.RunSQL "INSERT INTO UpdateLOC ( LLOCID ) SELECT LOCATION.LOCID AS Expr1 FROM LOCATION"
+    DoCmd.RunSQL "UPDATE LOCATION, UpdateLOC SET LOCATION.LOCID = [UpdateLOC].[LOCID] WHERE (((LOCATION.LOCID)=[UpdateLOC].[LLOCID]))"
+    DoCmd.RunSQL "UPDATE UpdateLOC, LOCDES SET LOCDES.LOCID = [UpdateLOC].[LOCID] WHERE (((LOCDES.LOCID)=[UpdateLOC].[LLOCID]))"
+    DoCmd.RunSQL "UPDATE UpdateLOC, GERMPLSM SET GERMPLSM.GLOCN = [UpdateLOC].[LOCID] WHERE (((GERMPLSM.GLOCN)=[UpdateLOC].[LLOCID]))"
+    DoCmd.RunSQL "UPDATE UpdateLOC, [NAMES] SET [NAMES].NLOCN = [UpdateLOC].[LOCID] WHERE (((NAMES.NLOCN)=[UpdateLOC].[LLOCID]))"
+    DoCmd.RunSQL "UPDATE UpdateLOC, ATRIBUTS SET ATRIBUTS.ALOCN = [UpdateLOC].[LOCID] WHERE (((ATRIBUTS.ALOCN)=[UpdateLOC].[LLOCID]))"
+    DoCmd.RunSQL "UPDATE LOCATION, UpdateLOC SET LOCATION.SNL3ID = [updateloc].[locid] WHERE (((LOCATION.SNL3ID)=[updateloc].[llocid]))"
+    DoCmd.RunSQL "UPDATE LOCATION, UpdateLOC SET LOCATION.SNL2ID = [updateloc].[locid] WHERE (((LOCATION.SNL2ID)=[updateloc].[llocid]))"
+    DoCmd.RunSQL "UPDATE LOCATION, UpdateLOC SET LOCATION.SNL1ID = [updateloc].[locid] WHERE (((LOCATION.SNL1ID)=[updateloc].[llocid]))"
+End Sub
+
+'@author czetsuya
+'@since 2009.08.25
+'Extract all local germplasm without local references UPD06A - UPD0C3
+Sub gExtLocGermNoLocRef()
+    DoCmd.RunSQL "INSERT INTO [UPDATEGID] ( LGID ) SELECT GERMPLSM.GID FROM GERMPLSM WHERE (((GERMPLSM.GID)<0) AND ((GERMPLSM.GPID1)>=0) AND ((GERMPLSM.GPID2)>=0) AND ((GERMPLSM.GRPLCE)=0))"
+    DoCmd.RunSQL "UPDATE GERMPLSM, [UPDATEGID] SET GERMPLSM.GID = [updategid].[gid] WHERE (((GERMPLSM.GID)=[updategid].[lgid]))"
+    DoCmd.RunSQL "UPDATE [UPDATEGID], PROGNTRS SET PROGNTRS.GID = [updategid].[gid] WHERE (((PROGNTRS.GID)=[updategid].[lgid]))"
+    DoCmd.RunSQL "UPDATE GERMPLSM, [UPDATEGID] SET GERMPLSM.GPID1 = [updategid].[gid] WHERE (((GERMPLSM.GPID1)=[updategid].[lgid]))"
+    DoCmd.RunSQL "UPDATE GERMPLSM, [UPDATEGID] SET GERMPLSM.GPID2 = [updategid].[gid] WHERE (((GERMPLSM.GPID2)=[updategid].[lgid]))"
+    DoCmd.RunSQL "UPDATE UPDATEGID, PROGNTRS SET PROGNTRS.PID = [updateGID].[gid] WHERE (((PROGNTRS.PID)=[updateGID].[lgid]))"
+End Sub
+
+'@author czetsuya
+'@since 2009.08.25
+'Update all remaining local germplasm references  UPD07A - UPD07C
+Sub gUpdLocGermRef()
+    DoCmd.RunSQL "UPDATE [NAMES], [UPDATEGID] SET [NAMES].GID = [updategid].[gid] WHERE (((NAMES.GID)=[updategid].[lgid]))"
+    DoCmd.RunSQL "UPDATE [UPDATEGID], ATRIBUTS SET ATRIBUTS.GID = [updategid].[gid] WHERE (((ATRIBUTS.GID)=[updategid].[lgid]) AND ((ATRIBUTS.ATYPE)<>101 Or (ATRIBUTS.ATYPE)<>102))"
+    DoCmd.RunSQL "UPDATE LISTDATA, [UPDATEGID] SET LISTDATA.GID = [updategid].[gid] WHERE (((LISTDATA.GID)=[updategid].[lgid]));"
+End Sub
+
+'@author czetsuya
+'@since 2009.08.25
+'Check if all these 3 requirements are fulfilled (all 3 must return 0 records):
+'There should be no records in GERMPLSM with negative GIDs and GRPLCE = 0.
+Function gChkUpd()
+    Dim str As String, msg As String, title As String
+    
+    msg = "There should be no records in GERMPLSM with negative GIDs and GRPLCE = 0."
+    title = "Update failed."
+    
+    str = "Select * From GERMPLSM Where GRPLCE=0 And GID < 0"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox msg, vbExclamation, title
+        gChkUpd = False
+        Exit Function
+    End If
+    rst.Close
+    
+    str = "Select * From NAMES a Where GID < 0 And NSTAT <> 9 And Not Exists (Select * From GERMPLSM b Where a.GID = b.GID and b.GRPLCE<>0)"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox msg, vbExclamation, title
+        gChkUpd = False
+        Exit Function
+    End If
+    rst.Close
+    
+    str = "Select * From ATRIBUTS a Where a.GID < 0 And Not Exists (Select * From GERMPLSM b Where a.GID = b.GID and b.GRPLCE<>0)"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox msg, vbExclamation, title
+        gChkUpd = False
+        Exit Function
+    End If
+    rst.Close
+    
+    str = "Select * From PROGNTRS Where (GID < 0 Or PID < 0)"
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (rst.RecordCount > 0) Then
+        MsgBox msg, vbExclamation, title
+        gChkUpd = False
+        Exit Function
+    End If
+    rst.Close
+    
+    gChkUpd = True
+End Function
+
+'@author czetsuya
+'@since 2009.08.25
+'Execute central changes and restore the local database UPD09A1 - UPD09E5
+Sub gExtCenChaResLocDat()
+    DoCmd.RunSQL "INSERT INTO LOCATION1 ( LOCID, LTYPE, NLLP, LNAME, LABBR, SNL3ID, SNL2ID, SNL1ID, CNTRYID, LRPLCE ) SELECT LOCATION.LOCID, LOCATION.LTYPE, LOCATION.NLLP, LOCATION.LNAME, LOCATION.LABBR, LOCATION.SNL3ID, LOCATION.SNL2ID, LOCATION.SNL1ID, LOCATION.CNTRYID, LOCATION.LRPLCE FROM LOCATION WHERE (((LOCATION.LOCID)>0))"
+    DoCmd.RunSQL "INSERT INTO LOCDES1 ( LOCID, DTYPE, DUID, DVAL, DDATE, DREF ) SELECT LOCDES.LOCID, LOCDES.DTYPE, LOCDES.DUID, LOCDES.DVAL, LOCDES.DDATE, LOCDES.DREF FROM LOCDES"
+    DoCmd.RunSQL "INSERT INTO NAMES1 ( GID, NTYPE, NSTAT, NUID, NVAL, NLOCN, NDATE, NREF ) SELECT NAMES.GID, NAMES.NTYPE, NAMES.NSTAT, NAMES.NUID, NAMES.NVAL, NAMES.NLOCN, NAMES.NDATE, NAMES.NREF FROM [NAMES] WHERE (((NAMES.GID)>0))"
+    DoCmd.RunSQL "INSERT INTO ATRIBUTS1 ( GID, ATYPE, AUID, AVAL, ALOCN, AREF, ADATE ) SELECT ATRIBUTS.GID, ATRIBUTS.ATYPE, ATRIBUTS.AUID, ATRIBUTS.AVAL, ATRIBUTS.ALOCN, ATRIBUTS.AREF, ATRIBUTS.ADATE FROM ATRIBUTS WHERE (((ATRIBUTS.GID)>0) AND ((ATRIBUTS.ATYPE)<>101 And (ATRIBUTS.ATYPE)<>102)) ORDER BY ATRIBUTS.AID DESC"
+    DoCmd.RunSQL "INSERT INTO GERMPLSM1 ( GID, METHN, GNPGS, GPID1, GPID2, GERMUID, LGID, GLOCN, GDATE, GREF, GRPLCE ) SELECT GERMPLSM.GID, GERMPLSM.METHN, GERMPLSM.GNPGS, GERMPLSM.GPID1, GERMPLSM.GPID2, GERMPLSM.GERMUID AS Expr1, GERMPLSM.LGID, GERMPLSM.GLOCN, GERMPLSM.GDATE, GERMPLSM.GREF, GERMPLSM.GRPLCE FROM GERMPLSM WHERE (((GERMPLSM.GID)>0) AND ((GERMPLSM.GRPLCE)=0))"
+    DoCmd.RunSQL "INSERT INTO PROGNTRS1 ( GID, PNO, PID ) SELECT PROGNTRS.GID, PROGNTRS.PNO, PROGNTRS.PID FROM PROGNTRS WHERE (((PROGNTRS.GID)>0) AND ((PROGNTRS.PID)>0))"
+    DoCmd.RunSQL "UPDATE CHANGES, [UPDATE] SET CHANGES.CTO = [UPDATE].[GID] WHERE (((CHANGES.CTO)=[UPDATE].[LGID]) AND ((CHANGES.CFIELD)='GID' Or (CHANGES.CFIELD)='GPID1' Or (CHANGES.CFIELD)='GPID2' Or (CHANGES.CFIELD)='PID') AND ((CHANGES.CRECORD)>0) AND ((CHANGES.CSTATUS)=0))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN GERMPLSM1 ON CHANGES.CRECORD = GERMPLSM1.GID SET GERMPLSM1.GRPLCE = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((GERMPLSM1.GRPLCE)=0) AND ((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GID') AND ((CHANGES.CTO)>0))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN GERMPLSM1 ON CHANGES.CRECORD = GERMPLSM1.GID SET GERMPLSM1.GRPLCE = [CHANGES].[CRECORD], CHANGES.CSTATUS = 2 WHERE (((GERMPLSM1.GRPLCE)=0) AND ((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GID') AND ((CHANGES.CTO)=0))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN GERMPLSM1 ON CHANGES.CRECORD = GERMPLSM1.GID SET GERMPLSM1.GPID1 = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((GERMPLSM1.GPID1)=[CHANGES].[CFROM]) AND ((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GPID1') AND ((CHANGES.CTO)>=0))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN GERMPLSM1 ON CHANGES.CRECORD = GERMPLSM1.GID SET GERMPLSM1.GPID2 = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((GERMPLSM1.GPID2)=[CHANGES].[CFROM]) AND ((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GPID2') AND ((CHANGES.CTO)>=0))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN GERMPLSM1 ON CHANGES.CRECORD = GERMPLSM1.GID SET GERMPLSM1.GDATE = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((GERMPLSM1.GDATE)=[CHANGES].[CFROM]) AND ((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GDATE') AND ((CHANGES.CTO)>=0))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN GERMPLSM1 ON CHANGES.CRECORD = GERMPLSM1.GID SET GERMPLSM1.GLOCN = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((GERMPLSM1.GLOCN)=[CHANGES].[CFROM]) AND ((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GLOCN') AND ((CHANGES.CTO)>=0))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN GERMPLSM1 ON CHANGES.CRECORD = GERMPLSM1.GID SET GERMPLSM1.METHN = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((GERMPLSM1.METHN)=[CHANGES].[CFROM]) AND ((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='METHN') AND ((CHANGES.CTO)>=0))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN GERMPLSM1 ON CHANGES.CRECORD = GERMPLSM1.GID SET GERMPLSM1.GNPGS = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((GERMPLSM1.GNPGS)=[CHANGES].[CFROM]) AND ((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='GERMPLSM') AND ((CHANGES.CFIELD)='GNPGS') AND ((CHANGES.CTO)>=-1))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN NAMES1 ON CHANGES.CRECORD = NAMES1.NID SET NAMES1.NSTAT = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((NAMES1.NSTAT)=[CHANGES].[CFROM]) AND ((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='NAMES') AND ((CHANGES.CFIELD)='NSTAT') AND ((CHANGES.CTO)>=0))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN NAMES1 ON CHANGES.CRECORD = NAMES1.NID SET NAMES1.NDATE = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((NAMES1.NDATE)=[CHANGES].[CFROM]) AND ((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='NAMES') AND ((CHANGES.CFIELD)='NDATE'))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN NAMES1 ON CHANGES.CRECORD = NAMES1.NID SET NAMES1.NLOCN = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((NAMES1.NLOCN)=[CHANGES].[CFROM]) AND ((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='NAMES') AND ((CHANGES.CFIELD)='NLOCN') AND ((CHANGES.CTO)>=0))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN NAMES1 ON CHANGES.CRECORD = NAMES1.NID SET NAMES1.NTYPE = [CHANGES].[CTO], CHANGES.CSTATUS = 2 WHERE (((NAMES1.NDATE)=[CHANGES].[CFROM]) AND ((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='NAMES') AND ((CHANGES.CFIELD)='NTYPE'))"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN ATRIBUTS1 ON CHANGES.CRECORD = ATRIBUTS1.AID SET ATRIBUTS1.ATYPE = [changes].[cto], CHANGES.CSTATUS = 2 WHERE (((CHANGES.CSTATUS)=0) AND ((CHANGES.CTABLE)='atributs') AND ((CHANGES.CFIELD)='atype') AND ((CHANGES.CTO)>=0))"
+    DoCmd.RunSQL "INSERT INTO UPDCHNG ( LCID ) SELECT CHANGES.CID FROM CHANGES WHERE (((CHANGES.CSTATUS)=2) AND ((CHANGES.CRECORD)>0)) ORDER BY CHANGES.CID DESC"
+    DoCmd.RunSQL "UPDATE CHANGES INNER JOIN UPDCHNG ON CHANGES.CID = UPDCHNG.LCID SET CHANGES.CID = [UPDCHNG].[CID], CHANGES.CSTATUS = [UPDCHNG].[LCID]"
+    DoCmd.RunSQL "INSERT INTO CHANGES1 ( CID, CTABLE, CFIELD, CRECORD, CFROM, CTO, CDATE, CTIME, CGROUP, CREF, CSTATUS, CDESC ) SELECT CHANGES.CID, CHANGES.CTABLE, CHANGES.CFIELD, CHANGES.CRECORD, CHANGES.CFROM, CHANGES.CTO, CHANGES.CDATE, CHANGES.CTIME, CHANGES.CGROUP, CHANGES.CREF, CHANGES.CSTATUS, CHANGES.CDESC FROM CHANGES WHERE (((CHANGES.CID)>0))"
+End Sub
+
+'@author czetsuya
+'@since 2009.08.25
+'Drop all link tables
+Sub gDropLinkTables()
+    Dim temp(0 To 27) As String
+    temp(0) = "ATRIBUTS"
+    temp(1) = "CHANGES"
+    temp(2) = "DATA_N"
+    temp(3) = "FACTOR"
+    temp(4) = "GERMPLSM"
+    temp(5) = "LEVEL_N"
+    temp(6) = "LISTDATA"
+    temp(7) = "LOCATION"
+    temp(8) = "LOCDES"
+    temp(9) = "MAXTABLE"
+    temp(10) = "NAMES"
+    temp(11) = "OINDEX"
+    temp(12) = "PROGNTRS"
+    temp(13) = "STUDY"
+    temp(14) = "VARIATE"
+    'central
+    temp(15) = "ATRIBUTS1"
+    temp(16) = "CHANGES1"
+    temp(17) = "GERMPLSM1"
+    temp(18) = "LOCATION1"
+    temp(19) = "LOCDES1"
+    temp(20) = "METHODS1"
+    temp(21) = "METHODS1"
+    temp(22) = "PROGNTRS1"
+    'temp
+    temp(23) = "UPDATEGID"
+    temp(24) = "UpdateLOC"
+    temp(25) = "UPDATRIB"
+    temp(26) = "UPDCHING"
+    temp(27) = "UPDNAMES"
+    
+    For Each tbl In temp
+        If FindTable(tbl) Then
+            DoCmd.DeleteObject acTable, tbl
+        End If
+    Next
+End Sub
