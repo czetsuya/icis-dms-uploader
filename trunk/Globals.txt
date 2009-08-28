@@ -1,3 +1,4 @@
+'@author czetsuya
 Option Compare Database
 
 Private selectedStudy As String

@@ -1,3 +1,4 @@
+'@author czetsuya
 Option Compare Database
 
 'link local tables
