@@ -1,3 +1,4 @@
+'@author czetsuya
 Option Compare Database
 
 Private Sub btnAppendToCentralDMS_Click()
@@ -47,6 +48,25 @@ Private Sub btnFilterStudy_Click()
     Else
         MsgBox "Please link the local and central tables first.", vbInformation
     End If
+End Sub
+
+Private Sub btnGMSAppend_Click()
+    DoCmd.SetWarnings False
+    gExtCenChaResLocDat
+    DoCmd.SetWarnings True
+End Sub
+
+Private Sub btnGMSUpdate_Click()
+    DoCmd.SetWarnings False
+    gPreLocUpdEnvt
+    gUpdateLocations
+    gExtLocGermNoLocRef
+    gUpdLocGermRef
+    If (gChkUpd = False) Then
+        MsgBox "An error in update has been detected. Please check the database", vbCritical, "Update Failed"
+        Exit Sub
+    End If
+    DoCmd.SetWarnings True
 End Sub
 
 Private Sub btnLinkTables_Click()
@@ -101,5 +121,11 @@ Private Sub btnGMSLink_Click()
 End Sub
 
 Private Sub btnGMSFilterTable_Click()
-    gCheckIntegrity
+    DoCmd.SetWarnings False
+    
+    If (gCheckIntegrity = False) Then
+        Exit Sub
+    End If
+    
+    DoCmd.SetWarnings True
 End Sub

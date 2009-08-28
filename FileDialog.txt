@@ -1,3 +1,4 @@
+'@author czetsuya
 Option Compare Database
 
 Private Declare Function GetOpenFileName Lib "comdlg32.dll" Alias _

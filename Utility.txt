@@ -1,3 +1,4 @@
+'@author czetsuya
 Option Compare Database
 Option Explicit
 
@@ -34,3 +35,25 @@ Public Sub InsertData(tblname As String, colName As String, val As String)
         DoCmd.RunSQL s
     Next
 End Sub
+
+Function GetMaxId(str As String) As Integer
+    Dim rst As DAO.Recordset, qdf As DAO.QueryDef
+    
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    If (IsNull(rst.fields(0))) Then
+        GetMaxId = 0
+    Else
+        GetMaxId = rst.fields(0)
+    End If
+    rst.Close
+End Function
+
+Function GetRecordCount(str As String) As Integer
+    Dim rst As DAO.Recordset, qdf As DAO.QueryDef
+    
+    Set qdf = CurrentDb.CreateQueryDef("", str)
+    Set rst = qdf.OpenRecordset()
+    GetRecordCount = rst.RecordCount
+    rst.Close
+End Function
